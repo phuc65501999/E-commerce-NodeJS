@@ -19,13 +19,13 @@ const checkConnections = () => {
 const checkOverLoad = () => {
     const connections = mongoose.connections;
     let activeConnections = 0;
-    setInterval(() => {
-        const comCore = os.cpus().length;
-        const memory = process.memoryUsage().rss / (1024 * 1024); // in MB
-        console.log('core', comCore);
-        console.log('memory', memory);
+    // setInterval(() => {
+    //     const comCore = os.cpus().length;
+    //     const memory = process.memoryUsage().rss / (1024 * 1024); // in MB
+    //     console.log('core', comCore);
+    //     console.log('memory', memory);
         
-    }, 5000);
+    // }, 5000);
 }
 
 module.exports = { checkOverLoad, checkConnections };

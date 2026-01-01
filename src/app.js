@@ -10,6 +10,10 @@ app.use(morgan('dev'));
 // morgan("combined")
 app.use(helmet());
 
+// body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 app.use(compression());
 // init db
 // require('./dbs/init.mongodb.lv0');
@@ -22,13 +26,7 @@ checkOverLoad();
 
 
 // init routes
-app.get('/', (req, res) => {
-    const strCompress = 'Welcome to the E-commerce API';
-    return res.status(200).json({
-        message: 'Welcome to the E-commerce API',
-        metadata: strCompress.repeat(10000)
-    });
-});
+app.use('/', require('./routers/index'));
 
 
 

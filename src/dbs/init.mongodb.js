@@ -5,7 +5,13 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const {checkConnections} = require('../helpers/check.connect');
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/ecommerce_lv0';
+let mongoURI = process.env.MONGO_URI;
+
+
+if (!mongoURI) {
+    console.error('Environment variable MONGO_URI is not set. Please provide a MongoDB connection string in MONGO_URI.');
+    mongoURI = 'mongodb://appUser:strongPassword@localhost:27017/ecommerce_lv0?authSource=ecommerce_lv0'
+}
 
 const mongooseOptions = {
     serverSelectionTimeoutMS: 5000,
