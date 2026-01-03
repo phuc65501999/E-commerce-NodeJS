@@ -32,28 +32,29 @@ class AccessService {
 
             if (newShop) {
                 // create private key and public key
-                const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
-                    modulusLength: 4096,
-                    publicKeyEncoding: {
-                        type: 'spki',
-                        format: 'pem'
-                    },
-                    privateKeyEncoding: {
-                        type: 'pkcs8',
-                        format: 'pem'
-                    }
-                });
+                // const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
+                //     modulusLength: 4096,
+                //     publicKeyEncoding: {
+                //         type: 'spki',
+                //         format: 'pem'
+                //     },
+                //     privateKeyEncoding: {
+                //         type: 'pkcs8',
+                //         format: 'pem'
+                //     }
+                // });
 
-                console.log({privateKey, publicKey }); // save collection keystore
+                const publicKey = crypto.randomBytes(64).toString('hex');
+                const privateKey = crypto.randomBytes(64).toString('hex');
 
-                
 
-                const publicKeyString = await require('./keyToken.service').createKeyToken({
+                const ketStore = await require('./keyToken.service').createKeyToken({
                     userId: newShop._id,
-                    publicKey
+                    publicKey,
+                    privateKey
                 });
 
-                if (!publicKeyString) {
+                if (!ketStore) {
                     return {
                         code: '500',
                         message: 'Error creating publicKey',
@@ -62,17 +63,27 @@ class AccessService {
                 }
 
                 // created token paid
-                const publicKeyObject = crypto.createPublicKey(publicKeyString);
                 const tokens = await require('../auth/authUtils').createTokenPaid(
                     {
                         userId: newShop._id,
                         email: newShop.email
                     },
-                    publicKeyObject,
+                    publicKey,
                     privateKey
                 );
 
-                console.log('Created Token Success::', tokens);
+                // store hashed refresh token in keystore
+                try {
+                    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+                    await require('./keyToken.service').saveRefreshToken({
+                        userId: newShop._id,
+                        refreshToken: tokens.refreshToken,
+                        expiresAt,
+                        device: 'signup'
+                    });
+                } catch (err) {
+                    console.log('saveRefreshToken error', err);
+                }
 
                 return { code: '201',
                     message: 'Shop created',
@@ -91,3 +102,42 @@ class AccessService {
     }
 }
 module.exports = AccessService;
+
+// refresh token flow
+AccessService.refreshToken = async ({ userId, refreshToken }) => {
+    try {
+        const KeyTokenService = require('./keyToken.service');
+        const KeyTokenModel = require('../models/keytoken.model');
+        const authUtils = require('../auth/authUtils');
+
+        // verify that refresh token exists and valid
+        const valid = await KeyTokenService.verifyRefreshToken({ userId, refreshToken });
+        if (!valid) {
+            return { code: '403', message: 'Invalid refresh token', status: 'failed' };
+        }
+
+        // load privateKey to sign new access token
+        const keyDoc = await KeyTokenModel.findOne({ user: userId }).lean();
+        if (!keyDoc || !keyDoc.privateKey) {
+            return { code: '500', message: 'Signing key not found', status: 'failed' };
+        }
+
+        const payload = { userId, email: keyDoc.email };
+
+        // create new pair (access + refresh)
+        const tokens = await authUtils.createTokenPaid(payload, keyDoc.publicKey, keyDoc.privateKey);
+
+        // save new refresh token and remove old one (rotation)
+        try {
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            await KeyTokenService.saveRefreshToken({ userId, refreshToken: tokens.refreshToken, expiresAt, device: 'refresh' });
+            await KeyTokenService.removeRefreshToken({ userId, refreshToken });
+        } catch (err) {
+            console.log('rotation error', err);
+        }
+
+        return { code: '200', status: 'success', tokens };
+    } catch (error) {
+        return { code: '500', message: error.message, status: 'failed' };
+    }
+}

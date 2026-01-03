@@ -17,9 +17,21 @@ var userSchema = new Schema({
         type:String,
         required:true
     },
-    refeshToken:{
-        type:Array,
-        default:[]
+    privateKey:{
+        type:String,
+        required:false
+    },
+    refreshTokens: {
+        type: [
+            {
+                tokenHash: { type: String, required: true },
+                device: { type: String },
+                createdAt: { type: Date, default: Date.now },
+                expiresAt: { type: Date },
+                revoked: { type: Boolean, default: false }
+            }
+        ],
+        default: []
     }
 }, {
     timestamps:true,

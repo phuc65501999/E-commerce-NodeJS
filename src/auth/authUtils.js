@@ -1,36 +1,45 @@
 'use strict';
 
 const JWT = require('jsonwebtoken');
+const crypto = require('crypto');
+
+// Note: access tokens are signed with `privateKey` (used as HMAC secret here).
 
 const createTokenPaid = async (payload, publicKey, privateKey) => {
     // create token
 
     try {
         // access token 
-        const accessToken = await JWT.sign(payload, privateKey, {
-            algorithm: 'RS256',
+        // sign access token using privateKey as secret (HS256)
+        const accessToken = JWT.sign(payload, privateKey, {
             expiresIn: '2h'
         });
 
-        const refreshToken = await JWT.sign(payload, privateKey, {
-            algorithm: 'RS256',
-            expiresIn: '7d'
-        });
+        // create opaque refresh token (random string)
+        const refreshToken = crypto.randomBytes(64).toString('hex');
 
-        JWT.verify(accessToken, publicKey, (err, decode) => {
-            if (err) {
-                console.log('error verify:: ', err);
-            } else {
-                console.log('decode verify:: ', decode);
-            }
-        });
-
-        return { accessToken, refreshToken  };
+        return { accessToken, refreshToken };
     } catch (error) {
+        console.log('createTokenPaid error:', error);
+        throw error;
         
     }
 }
+const verifyAccessToken = async (token, privateKey) => {
+    try {
+        const decoded = JWT.verify(token, privateKey);
+        return decoded;
+    } catch (error) {
+        return null;
+    }
+}
+
+const createAccessToken = (payload, privateKey) => {
+    return JWT.sign(payload, privateKey, { expiresIn: '2h' });
+}
 
 module.exports = {
-    createTokenPaid
+    createTokenPaid,
+    verifyAccessToken,
+    createAccessToken
 };
