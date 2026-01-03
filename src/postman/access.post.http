@@ -2,9 +2,10 @@
 
 POST http://localhost:3000/v1/api/shop/signup
 Content-Type: application/json
+x-api-key : '66b40e148b38fbbb90cf529ce58f6da2'
 
 {
     "name": "Shop ABCD",
-    "email": "1111111111111@example.com",
+    "email": "222@example.com",
     "password": "SecurePass123!"
 }

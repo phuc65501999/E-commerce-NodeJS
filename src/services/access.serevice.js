@@ -101,7 +101,6 @@ class AccessService {
         }
     }
 }
-module.exports = AccessService;
 
 // refresh token flow
 AccessService.refreshToken = async ({ userId, refreshToken }) => {
@@ -141,3 +140,5 @@ AccessService.refreshToken = async ({ userId, refreshToken }) => {
         return { code: '500', message: error.message, status: 'failed' };
     }
 }
+
+module.exports = AccessService;
