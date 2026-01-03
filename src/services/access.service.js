@@ -2,6 +2,9 @@
 const shopModel = require('../models/shop.model');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const {BadRequestError} = require('../core/error.response');
+
+const SuccessResponse = require('../core/sucess.response');   
 
 const roles = {
     SHOP : 'SHOP',
@@ -14,17 +17,15 @@ class AccessService {
     static signUp = async ({name, email, password}) => {
         try {
             // step 1 check if user already exists
-            const holderShop = await shopModel.findOne({ email }).lean();
-
-            console.log('111111111111111');
-            
+            const holderShop = await shopModel.findOne({ email }).lean();     
 
             if (holderShop) {
-                return {
-                    code : '400',
-                    message : 'Shop already exists',
-                    status : 'failed'
-                }
+                // return {
+                //     code : '400',
+                //     message : 'Shop already exists',
+                //     status : 'failed'
+                // }
+                throw new BadRequestError('Shop already exists');
             }
             // step 2 hash password
             const passwordHash = await bcrypt.hash(password, 10);
@@ -55,11 +56,13 @@ class AccessService {
                 });
 
                 if (!ketStore) {
-                    return {
-                        code: '500',
-                        message: 'Error creating publicKey',
-                        status: 'failed'
-                    }
+                    // return {
+                    //     code: '500',
+                    //     message: 'Error creating publicKey',
+                    //     status: 'failed'
+                    // }
+
+                    throw new BadRequestError('creating publicKey error');
                 }
 
                 // created token paid
@@ -85,19 +88,27 @@ class AccessService {
                     console.log('saveRefreshToken error', err);
                 }
 
-                return { code: '201',
+                // return { code: '201',
+                //     message: 'Shop created',
+                //     status: 'success',
+                //     shop: newShop,
+                //     tokens
+                // }
+                return SuccessResponse({
+                    code: '201',
                     message: 'Shop created',
                     status: 'success',
                     shop: newShop,
                     tokens
-                }
+                });
             }
         } catch (error) {
-            return {
-                code : '500',
-                message : error.message,
-                status : 'failed'
-            }
+            throw new BadRequestError(error.message);
+            // return {
+            //     code : '500',
+            //     message : error.message,
+            //     status : 'failed'
+            //
         }
     }
 }
@@ -112,13 +123,15 @@ AccessService.refreshToken = async ({ userId, refreshToken }) => {
         // verify that refresh token exists and valid
         const valid = await KeyTokenService.verifyRefreshToken({ userId, refreshToken });
         if (!valid) {
-            return { code: '403', message: 'Invalid refresh token', status: 'failed' };
+            // return { code: '403', message: 'Invalid refresh token', status: 'failed' };
+            throw new BadRequestError('Invalid refresh token');
         }
 
         // load privateKey to sign new access token
         const keyDoc = await KeyTokenModel.findOne({ user: userId }).lean();
         if (!keyDoc || !keyDoc.privateKey) {
-            return { code: '500', message: 'Signing key not found', status: 'failed' };
+            // return { code: '500', message: 'Signing key not found', status: 'failed' };
+            throw new BadRequestError('Signing key not found');
         }
 
         const payload = { userId, email: keyDoc.email };
@@ -135,9 +148,11 @@ AccessService.refreshToken = async ({ userId, refreshToken }) => {
             console.log('rotation error', err);
         }
 
-        return { code: '200', status: 'success', tokens };
+        // return { code: '200', status: 'success', tokens };
+        return SuccessResponse({ code: '200', status: 'success', tokens });
     } catch (error) {
-        return { code: '500', message: error.message, status: 'failed' };
+        // return { code: '500', message: error.message, status: 'failed' };
+        throw new BadRequestError(error.message);
     }
 }
 

@@ -31,7 +31,14 @@ app.use('/', require('./routers/index'));
 
 
 // handle errors
-
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        code : 500,
+        message : 'Internal Server Error',
+        status : 'failed'
+    });
+});
 
 
 module.exports = app;
