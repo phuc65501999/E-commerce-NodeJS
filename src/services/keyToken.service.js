@@ -1,16 +1,24 @@
 'use strict';
 
+const crypto = require('crypto');
+const KeyTokenModel = require('../models/keytoken.model');
+
 class KeyTokenService {
     // create or update publicKey, privateKey
 
-    static createKeyToken = async ({userId, publicKey, privateKey}) => {
+    static createKeyToken = async ({userId, publicKey, privateKey, refreshToken}) => {
         try {
-            const keyToken = await require('../models/keytoken.model').create({
-                user: userId,
-                publicKey: publicKey.toString(),
-                privateKey: privateKey ? privateKey.toString() : undefined
-            });
-            return keyToken ? keyToken.publicKey : null;
+            const tokens = await require('../models/keytoken.model').findOneAndUpdate(
+                { user: userId },
+                {
+                    publicKey: publicKey.toString(),
+                    privateKey: privateKey ? privateKey.toString() : undefined,
+                    refreshToken,
+                    refreshTokenUsed: []
+                },
+                { new: true, upsert: true }
+            ).lean();
+            return tokens;
         } catch (error) {
             console.log(error);
             return error;

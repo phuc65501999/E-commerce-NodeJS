@@ -6,6 +6,27 @@ x-api-key : '66b40e148b38fbbb90cf529ce58f6da2'
 
 {
     "name": "Shop ABCD",
-    "email": "222@example.com",
+    "email": "11@example.com",
     "password": "SecurePass123!"
 }
+### login
+
+
+POST http://localhost:3000/v1/api/shop/login
+Content-Type: application/json
+x-api-key : 66b40e148b38fbbb90cf529ce58f6da2
+x-client-id : 69610602a02344082614aded
+authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTYxMDYwMmEwMjM0NDA4MjYxNGFkZWQiLCJlbWFpbCI6IjExQGV4YW1wbGUuY29tIiwiaWF0IjoxNzY3OTY2MjEwLCJleHAiOjE3Njc5NzM0MTB9.roBMBB1eWP1F0oQA1_vp8Q6jEu0c0hhd9p64HaGyhPU
+
+{
+    "name": "Shop ABCD",
+    "email": "11@example.com",
+    "password": "SecurePass123!"
+}
+
+### logout
+POST http://localhost:3000/v1/api/shop/logout
+Content-Type: application/json
+x-api-key : 66b40e148b38fbbb90cf529ce58f6da2
+x-client-id : 6961010c8618bcf90ebaf665
+authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTYxMDEwYzg2MThiY2Y5MGViYWY2NjUiLCJlbWFpbCI6IjIyMkBleGFtcGxlLmNvbSIsImlhdCI6MTc2Nzk2NDk0MCwiZXhwIjoxNzY3OTcyMTQwfQ.AEWQTNBrwgVR4xmCiTVNi_aaw5VbRU0MqegghXPDFA4

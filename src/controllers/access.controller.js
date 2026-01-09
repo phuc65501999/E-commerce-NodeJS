@@ -19,6 +19,25 @@ class AccessController {
             next(error);
         }
     }
+
+    login = async (req, res, next) => {
+        try {
+            console.log('Login request received', req.body);
+            return res.status(200).json(await AccessService.login(req.body));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    logout = async (req, res, next) => {
+        try {
+            const userId = req.headers['x-client-id'];
+            const refreshToken = req.headers['authorization'];
+            return res.status(200).json(await AccessService.logout({ userId, refreshToken }));
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = new AccessController();

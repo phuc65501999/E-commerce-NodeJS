@@ -21,7 +21,7 @@ var userSchema = new Schema({
         type:String,
         required:false
     },
-    refreshTokens: {
+    refreshTokenUsed: {
         type: [
             {
                 tokenHash: { type: String, required: true },
@@ -32,6 +32,10 @@ var userSchema = new Schema({
             }
         ],
         default: []
+    },
+    refreshToken: {
+        type: String,
+        required: true
     }
 }, {
     timestamps:true,
