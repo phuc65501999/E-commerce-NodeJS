@@ -2,8 +2,11 @@
 
 const {product, clothing, electronic} = require('../models/product.model');
 
-class ProductFactory {
+const productRepo = require('../models/repositories/product.repo');
 
+
+
+class ProductFactory {
 
     static async createProduct(type, payload) {
         switch (type) {
@@ -17,33 +20,48 @@ class ProductFactory {
                 throw new Error(`Unknown product type: ${type}`);
         }
     }
+
+    static async findAllDraftForShop(shopId, limit = 50, skip = 0) {
+        const query = {product_shop: shopId, isDraft: true};
+        return await productRepo.findAllDraftForShop({query, limit, skip});
+    }
 }
 
 class Product {
-    constructor({name, description, price, type, thumb, quantity,shop, attributes}) {
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.type = type;
-        this.thumb = thumb;
-        this.quantity = quantity;
-        this.shop = shop;
-        this.attributes = attributes;
+    constructor(payload = {}) {
+        const {
+            product_name, product_description, product_price, product_type, product_thumb, product_quantity, product_shop, product_attributes,
+            name, description, price, type, thumb, quantity, shop, attributes
+        } = payload;
+
+        this.product_name = product_name || name;
+        this.product_description = product_description || description;
+        this.product_price = product_price || price;
+        this.product_type = product_type || type;
+        this.product_thumb = product_thumb || thumb;
+        this.product_quantity = product_quantity || quantity;
+        this.product_shop = product_shop || shop;
+        this.product_attributes = product_attributes || attributes;
     }
 
     async createProduct() {
-        return await product.create(this);
+        const doc = {
+            product_name: this.product_name,
+            product_description: this.product_description,
+            product_price: this.product_price,
+            product_type: this.product_type,
+            product_thumb: this.product_thumb,
+            product_quantity: this.product_quantity,
+            product_shop: this.product_shop,
+            product_attributes: this.product_attributes
+        };
+        return await product.create(doc);
     }
 }
 
 // defined sub class 
 
 class Clothing extends Product {
-    constructor({name, description, price, type, thumb, quantity, shop, attributes}) {
-        super({name, description, price, type, thumb, quantity, shop, attributes});
-        this.size = attributes.size;
-        this.material = attributes.material;
-    }   
     async createProduct() {
         const createdProduct = await clothing.create(this.attributes);
         if (!createdProduct) {
@@ -57,12 +75,7 @@ class Clothing extends Product {
     }
 }
 
-class Electronic extends Product {
-    constructor({name, description, price, type, thumb, quantity, shop, attributes}) {
-        super({name, description, price, type, thumb, quantity, shop, attributes});
-        this.brand = attributes.brand;
-        this.model = attributes.model;
-    }   
+class Electronic extends Product { 
     async createProduct() {
         const createdProduct = await super.createProduct();
         if (!createdProduct) {

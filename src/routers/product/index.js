@@ -10,5 +10,8 @@ router.use(authenticationV2);
 
 router.post('/', ProductController.createProduct);
 
+// query products draft
+router.get('/drafts/all', ProductController.getProductsDraft);
+
 
 module.exports = router;

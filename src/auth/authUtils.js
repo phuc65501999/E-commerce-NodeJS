@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const asyncHandler = require('../helpers/asyncHandler');
 const KeyTokenModel = require('../models/keytoken.model');
 const { Types } = require('mongoose');
+const { log } = require('console');
 
 const HEADER = {
     API_KEY : 'x-api-key',
@@ -102,6 +103,7 @@ const authenticationV2 = asyncHandler(async (req, res, next) => {
             return res.status(401).json({ message: 'Client Id header missing' });
         }
         const keyStore = await KeyTokenModel.findOne({ user: new Types.ObjectId(userId) }).lean();
+        console.log('keyStore :: ', keyStore);
         if (!keyStore) {
             return res.status(401).json({ message: 'Key store not found' });
         }

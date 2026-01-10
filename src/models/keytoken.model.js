@@ -23,13 +23,7 @@ var userSchema = new Schema({
     },
     refreshTokenUsed: {
         type: [
-            {
-                tokenHash: { type: String, required: true },
-                device: { type: String },
-                createdAt: { type: Date, default: Date.now },
-                expiresAt: { type: Date },
-                revoked: { type: Boolean, default: false }
-            }
+            String
         ],
         default: []
     },

@@ -172,9 +172,15 @@ class AccessService {
 
     static refreshToken = async ({ refreshToken, user, keyStore }) => {
         const { userId } = user;
-        if (keyStore.refreshTokensUsed.includes(refreshToken)) {
-            await keyTokenService.removeKeyById(userId);
-            throw new BadRequestError('Something wrong happen. Please login again');
+        if (keyStore.refreshTokenUsed.includes(refreshToken)) {
+            await keyTokenService.removeRefreshToken({ userId, refreshToken });
+
+            // throw new BadRequestError('Something wrong happen. Please login again');
+            return {
+                code: '403',
+                message: 'Something wrong happen. Please login again',
+                status: 'failed'
+            }
         }
 
         if (keyStore.refreshToken !== refreshToken) {

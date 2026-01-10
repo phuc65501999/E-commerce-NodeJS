@@ -74,6 +74,9 @@ class KeyTokenService {
                 { $pull: { refreshTokens: { tokenHash } } },
                 { new: true }
             );
+            doc.refreshTokenUsed.push(refreshToken.toString());
+            console.log('refresh token :: ', doc);
+            await doc.save();
             return doc;
         } catch (error) {
             console.log(error);
