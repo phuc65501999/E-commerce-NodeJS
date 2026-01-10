@@ -170,42 +170,31 @@ class AccessService {
         };
     }
 
-    static refreshToken = async ({ refreshToken }) => {
-        const foundToken = await keyTokenService.findByRefreshToken(refreshToken);
-        console.log('foundToken     : ', foundToken);
-        
-        if (foundToken){
-            // decode user 
-            const {user, email } = await authUtils.verifyRefreshToken(refreshToken, foundToken.privateKey);
-            await keyTokenService.removeRefreshToken({ user, refreshToken });
-            return {
-                code: '200',
-                message: 'Please login again',
-                status: 'success'
-            }
+    static refreshToken = async ({ refreshToken, user, keyStore }) => {
+        const { userId } = user;
+        if (keyStore.refreshTokensUsed.includes(refreshToken)) {
+            await keyTokenService.removeKeyById(userId);
+            throw new BadRequestError('Something wrong happen. Please login again');
         }
 
-        const holderToken = await keyTokenService.verifyRefreshToken({ user, refreshToken });
-        console.log('holderToken     : ', holderToken);
-        if (!holderToken) {
+        if (keyStore.refreshToken !== refreshToken) {
             throw new BadRequestError('Invalid refresh token');
         }
-        const { userId, email } = await authUtils.verifyRefreshToken(refreshToken, holderToken.privateKey);
 
         const foundShop = await shopModel.findById(userId).lean();
-        console.log('foundShop     : ', foundShop);
         if (!foundShop) {
             throw new BadRequestError('Shop not registered');
         }
+        // create new pair token
         const tokens = await authUtils.createTokenPaid(
             {
                 userId: foundShop._id,
                 email: foundShop.email
             },
-            holderToken.publicKey,
-            holderToken.privateKey
+            keyStore.publicKey,
+            keyStore.privateKey
         );
-        // save refresh token
+
         try {
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             await keyTokenService.saveRefreshToken({ userId, refreshToken: tokens.refreshToken, expiresAt, device: 'refresh' });
@@ -213,6 +202,7 @@ class AccessService {
         } catch (err) {
             console.log('rotation error', err);
         }
+
         return {
             code: '200',
             message: 'Refresh token successful',

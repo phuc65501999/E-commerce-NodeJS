@@ -13,8 +13,12 @@ class AccessController {
 
     refresh = async (req, res, next) => {
         try {
-            const refreshToken = req.headers['authorization'];
-            return res.status(200).json(await AccessService.refreshToken({ refreshToken }));
+
+            return res.status(200).json(await AccessService.refreshToken({ 
+                refreshToken: req.refreshToken,
+                user: req.user,
+                keyStore: req.keyStore
+             }));
         } catch (error) {
             next(error);
         }

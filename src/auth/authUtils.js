@@ -10,7 +10,8 @@ const { Types } = require('mongoose');
 const HEADER = {
     API_KEY : 'x-api-key',
     AUTHORIZATION : 'authorization',
-    CLIENT_ID : 'x-client-id'
+    CLIENT_ID : 'x-client-id',
+    REFRESH_TOKEN: 'x-refresh-token'
 }
 
 // Note: access tokens are signed with `privateKey` (used as HMAC secret here).
@@ -94,10 +95,52 @@ const authentication = asyncHandler(async (req, res, next) => {
     }
 });
 
+const authenticationV2 = asyncHandler(async (req, res, next) => {
+    try {
+        const userId = req.headers[HEADER.CLIENT_ID];
+        if (!userId) {
+            return res.status(401).json({ message: 'Client Id header missing' });
+        }
+        const keyStore = await KeyTokenModel.findOne({ user: new Types.ObjectId(userId) }).lean();
+        if (!keyStore) {
+            return res.status(401).json({ message: 'Key store not found' });
+        }
+        let refreshToken = req.headers[HEADER.REFRESH_TOKEN];
+        if (refreshToken ) {
+            const decoded = await verifyRefreshToken(refreshToken, keyStore.privateKey);
+            if (userId !== decoded.userId) {
+                return res.status(401).json({ message: 'Invalid user' });
+            }
+            req.keyStore = keyStore;
+            req.user = decoded;
+            req.refreshToken = refreshToken;
+            return next();
+        }
+
+        let token = req.headers[HEADER.AUTHORIZATION];
+        if (!token) {
+            return res.status(401).json({ message: 'Authorization header missing' });
+        }
+        if (typeof token === 'string' && token.toLowerCase().startsWith('bearer ')) {
+            token = token.slice(7).trim();
+        }
+        const decoded = await verifyAccessToken(token, keyStore.privateKey);
+        if (!decoded) {
+            return res.status(401).json({ message: 'Invalid token' });
+        }
+        req.user = decoded;
+        return next();
+    } catch (error) {
+        console.log('AuthenticationV2 error:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 module.exports = {
     createTokenPaid,
     verifyAccessToken,
     createAccessToken,
     authentication,
-    verifyRefreshToken
+    verifyRefreshToken,
+    authenticationV2
 };
