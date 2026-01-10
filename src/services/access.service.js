@@ -6,6 +6,10 @@ const {BadRequestError} = require('../core/error.response');
 
 const SuccessResponse = require('../core/success.response');   
 
+const keyTokenService = require('./keyToken.service');
+
+const authUtils = require('../auth/authUtils');
+
 const roles = {
     SHOP : 'SHOP',
     WRITER : 'WRITER',
@@ -155,56 +159,112 @@ class AccessService {
 
     static logout = async ({ userId, refreshToken }) => {
         // remove refresh token in keystore
-        await require('./keyToken.service').removeRefreshToken({ userId, refreshToken });
+        const removed = await require('./keyToken.service').removeRefreshToken({ userId, refreshToken });
+        if (!removed) {
+            throw new BadRequestError('Logout failed');
+        }
         return {
             code: '200',
             message: 'Logout successful',
             status: 'success'
         };
     }
-}
 
-// refresh token flow
-AccessService.refreshToken = async ({ userId, refreshToken }) => {
-    try {
-        const KeyTokenService = require('./keyToken.service');
-        const KeyTokenModel = require('../models/keytoken.model');
-        const authUtils = require('../auth/authUtils');
+    static refreshToken = async ({ refreshToken }) => {
+        const foundToken = await keyTokenService.findByRefreshToken(refreshToken);
+        console.log('foundToken     : ', foundToken);
+        
+        if (foundToken){
+            // decode user 
+            const {user, email } = await authUtils.verifyRefreshToken(refreshToken, foundToken.privateKey);
+            await keyTokenService.removeRefreshToken({ user, refreshToken });
+            return {
+                code: '200',
+                message: 'Please login again',
+                status: 'success'
+            }
+        }
 
-        // verify that refresh token exists and valid
-        const valid = await KeyTokenService.verifyRefreshToken({ userId, refreshToken });
-        if (!valid) {
-            // return { code: '403', message: 'Invalid refresh token', status: 'failed' };
+        const holderToken = await keyTokenService.verifyRefreshToken({ user, refreshToken });
+        console.log('holderToken     : ', holderToken);
+        if (!holderToken) {
             throw new BadRequestError('Invalid refresh token');
         }
+        const { userId, email } = await authUtils.verifyRefreshToken(refreshToken, holderToken.privateKey);
 
-        // load privateKey to sign new access token
-        const keyDoc = await KeyTokenModel.findOne({ user: userId }).lean();
-        if (!keyDoc || !keyDoc.privateKey) {
-            // return { code: '500', message: 'Signing key not found', status: 'failed' };
-            throw new BadRequestError('Signing key not found');
+        const foundShop = await shopModel.findById(userId).lean();
+        console.log('foundShop     : ', foundShop);
+        if (!foundShop) {
+            throw new BadRequestError('Shop not registered');
         }
-
-        const payload = { userId, email: keyDoc.email };
-
-        // create new pair (access + refresh)
-        const tokens = await authUtils.createTokenPaid(payload, keyDoc.publicKey, keyDoc.privateKey);
-
-        // save new refresh token and remove old one (rotation)
+        const tokens = await authUtils.createTokenPaid(
+            {
+                userId: foundShop._id,
+                email: foundShop.email
+            },
+            holderToken.publicKey,
+            holderToken.privateKey
+        );
+        // save refresh token
         try {
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-            await KeyTokenService.saveRefreshToken({ userId, refreshToken: tokens.refreshToken, expiresAt, device: 'refresh' });
-            await KeyTokenService.removeRefreshToken({ userId, refreshToken });
+            await keyTokenService.saveRefreshToken({ userId, refreshToken: tokens.refreshToken, expiresAt, device: 'refresh' });
+            await keyTokenService.removeRefreshToken({ userId, refreshToken });
         } catch (err) {
             console.log('rotation error', err);
         }
-
-        // return { code: '200', status: 'success', tokens };
-        return SuccessResponse({ code: '200', status: 'success', tokens });
-    } catch (error) {
-        // return { code: '500', message: error.message, status: 'failed' };
-        throw new BadRequestError(error.message);
-    }
+        return {
+            code: '200',
+            message: 'Refresh token successful',
+            status: 'success',
+            tokens
+            }
+        };
 }
+
+
+
+// refresh token flow
+// AccessService.refreshToken = async ({ userId, refreshToken }) => {
+//     try {
+//         const KeyTokenService = require('./keyToken.service');
+//         const KeyTokenModel = require('../models/keytoken.model');
+//         const authUtils = require('../auth/authUtils');
+
+//         // verify that refresh token exists and valid
+//         const valid = await KeyTokenService.verifyRefreshToken({ userId, refreshToken });
+//         if (!valid) {
+//             // return { code: '403', message: 'Invalid refresh token', status: 'failed' };
+//             throw new BadRequestError('Invalid refresh token');
+//         }
+
+//         // load privateKey to sign new access token
+//         const keyDoc = await KeyTokenModel.findOne({ user: userId }).lean();
+//         if (!keyDoc || !keyDoc.privateKey) {
+//             // return { code: '500', message: 'Signing key not found', status: 'failed' };
+//             throw new BadRequestError('Signing key not found');
+//         }
+
+//         const payload = { userId, email: keyDoc.email };
+
+//         // create new pair (access + refresh)
+//         const tokens = await authUtils.createTokenPaid(payload, keyDoc.publicKey, keyDoc.privateKey);
+
+//         // save new refresh token and remove old one (rotation)
+//         try {
+//             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+//             await KeyTokenService.saveRefreshToken({ userId, refreshToken: tokens.refreshToken, expiresAt, device: 'refresh' });
+//             await KeyTokenService.removeRefreshToken({ userId, refreshToken });
+//         } catch (err) {
+//             console.log('rotation error', err);
+//         }
+
+//         // return { code: '200', status: 'success', tokens };
+//         return SuccessResponse({ code: '200', status: 'success', tokens });
+//     } catch (error) {
+//         // return { code: '500', message: error.message, status: 'failed' };
+//         throw new BadRequestError(error.message);
+//     }
+// }
 
 module.exports = AccessService;

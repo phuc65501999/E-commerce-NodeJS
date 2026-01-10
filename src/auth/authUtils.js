@@ -26,7 +26,9 @@ const createTokenPaid = async (payload, publicKey, privateKey) => {
         });
 
         // create opaque refresh token (random string)
-        const refreshToken = crypto.randomBytes(64).toString('hex');
+        const refreshToken = JWT.sign(payload, privateKey, {
+            expiresIn: '7d'
+        });
 
         return { accessToken, refreshToken };
     } catch (error) {
@@ -36,6 +38,15 @@ const createTokenPaid = async (payload, publicKey, privateKey) => {
     }
 }
 const verifyAccessToken = async (token, privateKey) => {
+    try {
+        const decoded = JWT.verify(token, privateKey);
+        return decoded;
+    } catch (error) {
+        return null;
+    }
+}
+
+const verifyRefreshToken = async (token, privateKey) => {
     try {
         const decoded = JWT.verify(token, privateKey);
         return decoded;
@@ -87,5 +98,6 @@ module.exports = {
     createTokenPaid,
     verifyAccessToken,
     createAccessToken,
-    authentication
+    authentication,
+    verifyRefreshToken
 };

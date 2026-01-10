@@ -62,6 +62,10 @@ class KeyTokenService {
         }
     }
 
+    static findByRefreshToken = async (refreshToken) => {
+        return await KeyTokenModel.findOne({ refreshToken }).lean();
+    }
+
     static removeRefreshToken = async ({ userId, refreshToken }) => {
         try {
             const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');

@@ -13,8 +13,8 @@ class AccessController {
 
     refresh = async (req, res, next) => {
         try {
-            const { userId, refreshToken } = req.body;
-            return res.status(200).json(await AccessService.refreshToken({ userId, refreshToken }));
+            const refreshToken = req.headers['authorization'];
+            return res.status(200).json(await AccessService.refreshToken({ refreshToken }));
         } catch (error) {
             next(error);
         }

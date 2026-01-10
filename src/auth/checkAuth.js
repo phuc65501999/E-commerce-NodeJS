@@ -41,9 +41,6 @@ const checkPermission = (permission) => {
     return (req, res, next) => {
         try {
             const objKey = req.objKey;
-            console.log('objKey: ', objKey);
-            console.log('permission: ', permission);
-            console.log('condition : ', objKey.permissions.includes(permission));
             
             if (objKey && Array.isArray(objKey.permissions) && objKey.permissions.includes(permission)){
                 return next();
